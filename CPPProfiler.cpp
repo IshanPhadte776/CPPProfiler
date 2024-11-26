@@ -15,6 +15,10 @@
 #include "extraFunc.h"
 #include "NumberProcessor.h"
 
+#include <iostream>
+#include <chrono>
+#include <windows.h>
+#include <thread> // For sleep functionality
 
 // Data
 static LPDIRECT3D9              g_pD3D = nullptr;
@@ -265,4 +269,87 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
     }
     return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+}
+
+//Function to get CPU usage
+double getCpuUsage(FILETIME& prevSysKernel, FILETIME& prevSysUser, FILETIME& prevSysIdle) {
+    // sysIdle: Time spent in idle mode.
+    // sysKernel: Time spent in kernel-mode operations (system-level tasks).
+    // sysUser: Time spent in user-mode operations (application-level tasks).
+    FILETIME sysIdle, sysKernel, sysUser;
+
+    // Declare variables to hold the difference in kernel and user CPU times.
+    ULARGE_INTEGER sysKernelDiff, sysUserDiff, sysIdleDiff, sysTotalDiff;
+
+    // Fetch the current system times for idle, kernel, and user operations.
+    // If the function fails, return -1.0 to indicate an error.
+    if (!GetSystemTimes(&sysIdle, &sysKernel, &sysUser)) {
+        return -1.0; // Error in fetching CPU usage
+    }
+
+    // Calculate the differences in system time
+    // Calculate the difference in kernel-mode CPU time since the last measurement.
+    sysKernelDiff.QuadPart = ((ULARGE_INTEGER&)sysKernel).QuadPart - ((ULARGE_INTEGER&)prevSysKernel).QuadPart;
+    sysUserDiff.QuadPart = ((ULARGE_INTEGER&)sysUser).QuadPart - ((ULARGE_INTEGER&)prevSysUser).QuadPart;
+    sysIdleDiff.QuadPart = ((ULARGE_INTEGER&)sysIdle).QuadPart - ((ULARGE_INTEGER&)prevSysIdle).QuadPart;
+
+    // Total CPU time is the sum of kernel, user, and idle time.
+    sysTotalDiff.QuadPart = sysKernelDiff.QuadPart + sysUserDiff.QuadPart + sysIdleDiff.QuadPart;
+
+    // Update previous system times for the next calculation
+    prevSysKernel = sysKernel;
+    prevSysUser = sysUser;
+    prevSysIdle = sysIdle;
+
+    // If there's no total time difference, return 0.0% CPU usage (no change in usage)
+    if (sysTotalDiff.QuadPart == 0) {
+        return 0.0;
+    }
+
+    // Calculate active CPU time (kernel + user time)
+    ULARGE_INTEGER sysActiveDiff;
+    sysActiveDiff.QuadPart = sysKernelDiff.QuadPart + sysUserDiff.QuadPart;
+
+    // Calculate CPU usage percentage
+    double cpuUsage = (double)sysActiveDiff.QuadPart / (double)sysTotalDiff.QuadPart * 100.0;
+
+    return cpuUsage; // Return the CPU usage percentage
+}
+
+// A simple function to profile
+void sampleFunction(int N) {
+    long long sum = 0;
+
+    for (int j = 0; j < N; j++) {
+        sum += 1;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    }
+}
+
+// Function to profile the sample function and get execution time
+void profileFunction(double& executionTime, double& cpuUsage) {
+    // Declare variables to store the kernel-mode and user-mode CPU times before the function execution.
+    // These values represent the CPU time used by the system and user processes so far.
+    FILETIME prevSysKernel, prevSysUser, prevSysIdle;
+    // Fetch the current system times for kernel-mode and user-mode processes.
+    // The nullptr argument ignores the idle time, focusing only on active CPU usage.
+    //Updates the Values in the process
+    GetSystemTimes(&prevSysIdle, &prevSysKernel, &prevSysUser);
+
+
+    // Start timing the execution
+    auto start = std::chrono::high_resolution_clock::now();
+
+
+
+    extraFunction2();
+
+
+
+    // End timing the execution
+    auto end = std::chrono::high_resolution_clock::now();
+    executionTime = std::chrono::duration<double, std::milli>(end - start).count();
+
+    cpuUsage = getCpuUsage(prevSysKernel, prevSysUser, prevSysIdle);
 }
