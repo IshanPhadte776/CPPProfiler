@@ -12,6 +12,10 @@
 #include <d3d9.h>
 #include <tchar.h>
 
+#include "extraFunc.h"
+#include "NumberProcessor.h"
+
+
 // Data
 static LPDIRECT3D9              g_pD3D = nullptr;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = nullptr;
