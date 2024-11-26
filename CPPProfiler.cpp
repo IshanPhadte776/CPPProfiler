@@ -20,6 +20,18 @@
 #include <windows.h>
 #include <thread> // For sleep functionality
 
+// Profiling variables
+bool startProfiling = false;
+bool profilingInProgress = false;
+
+//Time in Seconds
+double executionTime = 0.0;
+// This measures the actual CPU processing time, excluding idle or waiting periods.
+double cpuUsage = 0.0;
+
+double lastExecutionTime = 0.0;
+double lastCpuUsage = 0.0;
+
 // Data
 static LPDIRECT3D9              g_pD3D = nullptr;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = nullptr;
@@ -32,6 +44,10 @@ bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 void ResetDevice();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+void sampleFunction(int N);
+void profileFunction(double& executionTime, double& cpuUsage);
+double getCpuUsage(FILETIME& prevSysKernel, FILETIME& prevSysUser, FILETIME& prevSysIdle);
 
 // Main code
 int main(int, char**)
@@ -146,19 +162,37 @@ int main(int, char**)
 
             ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
+            if (startProfiling) {
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+                // Profile the function and get results
+                profileFunction(executionTime, cpuUsage);
 
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+                executionTime = executionTime / 1000.0;
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+                unsigned int numCores = std::thread::hardware_concurrency();
+
+                std::cout << "Execution Time: " << executionTime << " s" << std::endl;
+                // Calculate CPU usage as a percentage relative to the execution time
+                double cpuPercentage = (cpuUsage / executionTime) / numCores;
+
+                // Output the CPU usage as a percentage
+                std::cout << "CPU Usage: " << cpuPercentage << " %" << std::endl;
+
+                executionTime = 0.0;
+                cpuUsage = 0.0;
+
+                startProfiling = false;
+
+            }
+
+            // Render GUI
+            ImGui::Begin("Profiler");
+            if (ImGui::Button("Start Profiling")) {
+                startProfiling = true; // Trigger profiling
+            }
+
+            ImGui::End();
+
             ImGui::End();
         }
 
