@@ -19,6 +19,8 @@
 #include <chrono>
 #include <windows.h>
 #include <thread> // For sleep functionality
+#include <filesystem> // C++17 filesystem
+
 
 // Profiling variables
 bool startProfiling = false;
