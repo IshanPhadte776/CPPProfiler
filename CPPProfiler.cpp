@@ -20,7 +20,7 @@
 #include <windows.h>
 #include <thread> // For sleep functionality
 #include <filesystem> // C++17 filesystem
-
+namespace fs = std::filesystem;
 
 // Profiling variables
 bool startProfiling = false;
@@ -164,6 +164,48 @@ int main(int, char**)
 
             ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
+            ImGui::Text("Select a file to profile:"); // Display some helpful text
+
+            static std::vector<std::string> fileList;   // List of files in the current directory
+            static std::string selectedFile;           // The selected file
+            static bool filesListed = false;           // Flag to indicate if files have been listed
+
+            ImGui::Begin("File Selector"); // Window title
+
+            ImGui::Text("Select a file to profile:");
+
+            // If the file list is not yet loaded, populate it
+            if (!filesListed) {
+                fileList.clear(); // Clear the list before populating
+                for (const auto& entry : fs::directory_iterator(".")) { // Iterate in the current directory
+                    if (entry.is_regular_file()) {
+                        fileList.push_back(entry.path().filename().string());
+                    }
+                }
+                filesListed = true; // Files are now listed
+            }
+
+            // Display the files as selectable items
+            for (const auto& file : fileList) {
+                if (ImGui::Selectable(file.c_str(), selectedFile == file)) {
+                    selectedFile = file; // Set the selected file
+                }
+            }
+
+            // Run button logic
+            if (!selectedFile.empty()) { // Enable profiling only if a file is selected
+                if (ImGui::Button("Profile Selected File")) {
+                    std::cout << "Profiling file: " << selectedFile << std::endl;
+
+                    // Add your profiling logic here
+                    profileFunction(executionTime, cpuUsage);
+                }
+            }
+
+            ImGui::End();
+
+            
+
             if (startProfiling) {
 
                 // Profile the function and get results
@@ -194,6 +236,8 @@ int main(int, char**)
             }
 
             ImGui::End();
+
+            
 
             ImGui::End();
         }
