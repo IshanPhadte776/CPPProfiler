@@ -157,90 +157,79 @@ int main(int, char**)
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
+        // 2. Create a separate window for profiling options
+        ImGui::Begin("Profiler");
 
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("Select a file to profile:"); // Display some helpful text
-
-            static std::vector<std::string> fileList;   // List of files in the current directory
-            static std::string selectedFile;           // The selected file
-            static bool filesListed = false;           // Flag to indicate if files have been listed
-
-            ImGui::Begin("File Selector"); // Window title
-
-            ImGui::Text("Select a file to profile:");
-
-            // If the file list is not yet loaded, populate it
-            if (!filesListed) {
-                fileList.clear(); // Clear the list before populating
-                for (const auto& entry : fs::directory_iterator(".")) { // Iterate in the current directory
-                    if (entry.is_regular_file()) {
-                        fileList.push_back(entry.path().filename().string());
-                    }
-                }
-                filesListed = true; // Files are now listed
-            }
-
-            // Display the files as selectable items
-            for (const auto& file : fileList) {
-                if (ImGui::Selectable(file.c_str(), selectedFile == file)) {
-                    selectedFile = file; // Set the selected file
-                }
-            }
-
-            // Run button logic
-            if (!selectedFile.empty()) { // Enable profiling only if a file is selected
-                if (ImGui::Button("Profile Selected File")) {
-                    std::cout << "Profiling file: " << selectedFile << std::endl;
-
-                    // Add your profiling logic here
-                    profileFunction(executionTime, cpuUsage);
-                }
-            }
-
-            ImGui::End();
-
-            
-
-            if (startProfiling) {
-
-                // Profile the function and get results
-                profileFunction(executionTime, cpuUsage);
-
-                executionTime = executionTime / 1000.0;
-
-                unsigned int numCores = std::thread::hardware_concurrency();
-
-                std::cout << "Execution Time: " << executionTime << " s" << std::endl;
-                // Calculate CPU usage as a percentage relative to the execution time
-                double cpuPercentage = (cpuUsage / executionTime) / numCores;
-
-                // Output the CPU usage as a percentage
-                std::cout << "CPU Usage: " << cpuPercentage << " %" << std::endl;
-
-                executionTime = 0.0;
-                cpuUsage = 0.0;
-
-                startProfiling = false;
-
-            }
-
-            // Render GUI
-            ImGui::Begin("Profiler");
-            if (ImGui::Button("Start Profiling")) {
-                startProfiling = true; // Trigger profiling
-            }
-
-            ImGui::End();
-
-            
-
-            ImGui::End();
+        // Display profiling button if not already profiling
+        if (ImGui::Button("Start Profiling")) {
+            startProfiling = true; // Trigger profiling
         }
+
+        // Display profiling results if profiling has started
+        if (startProfiling) {
+            // Profile the function and get results
+            profileFunction(executionTime, cpuUsage);
+
+            // Convert execution time to seconds for display
+            executionTime = executionTime / 1000.0;
+
+            unsigned int numCores = std::thread::hardware_concurrency();
+            std::cout << "Execution Time: " << executionTime << " s" << std::endl;
+
+            // Calculate CPU usage as a percentage relative to the execution time
+            double cpuPercentage = (cpuUsage / executionTime) / numCores;
+            std::cout << "CPU Usage: " << cpuPercentage << " %" << std::endl;
+
+            // Reset the profiling values
+            executionTime = 0.0;
+            cpuUsage = 0.0;
+
+            // Stop profiling after showing results
+            startProfiling = false;
+        }
+
+
+        // 2. File Selector Window
+
+        static std::vector<std::string> fileList;   // List of files in the current directory
+        static std::string selectedFile;           // The selected file
+        static bool filesListed = false;           // Flag to indicate if files have been listed
+
+        ImGui::Text("Select a file to profile:");
+
+        // If the file list is not yet loaded, populate it
+        if (!filesListed) {
+            fileList.clear(); // Clear the list before populating
+            for (const auto& entry : fs::directory_iterator(".")) { // Iterate in the current directory
+                if (entry.is_regular_file()) {
+                    fileList.push_back(entry.path().filename().string());
+                }
+            }
+            filesListed = true; // Files are now listed
+        }
+
+        // Display the files as selectable items
+        for (const auto& file : fileList) {
+            if (ImGui::Selectable(file.c_str(), selectedFile == file)) {
+                selectedFile = file; // Set the selected file
+            }
+        }
+
+        // Run button logic
+        if (!selectedFile.empty()) { // Enable profiling only if a file is selected
+            if (ImGui::Button("Profile Selected File")) {
+                std::cout << "Profiling file: " << selectedFile << std::endl;
+
+                // Trigger profiling (you should define profileFunction logic elsewhere)
+                profileFunction(executionTime, cpuUsage);
+            }
+        }
+
+        ImGui::End();  // End file selector window
+
+        
+
+        
 
         // 3. Show another simple window.
         if (show_another_window)
