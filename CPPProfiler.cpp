@@ -50,6 +50,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void sampleFunction(int N);
 void profileFunction(double& executionTime, double& cpuUsage);
 double getCpuUsage(FILETIME& prevSysKernel, FILETIME& prevSysUser, FILETIME& prevSysIdle);
+void profileFile(const std::string& filePath, double& executionTime, double& cpuUsage);
 
 // Main code
 int main(int, char**)
@@ -221,7 +222,11 @@ int main(int, char**)
                 std::cout << "Profiling file: " << selectedFile << std::endl;
 
                 // Trigger profiling (you should define profileFunction logic elsewhere)
-                profileFunction(executionTime, cpuUsage);
+                profileFile(selectedFile, executionTime, cpuUsage);  // Profile the file
+
+                // Show the profiling results
+                std::cout << "Execution Time: " << executionTime << " ms" << std::endl;
+                std::cout << "CPU Usage: " << cpuUsage * 100.0 << "%" << std::endl;
             }
         }
 
@@ -422,3 +427,35 @@ void profileFunction(double& executionTime, double& cpuUsage) {
 
     cpuUsage = getCpuUsage(prevSysKernel, prevSysUser, prevSysIdle);
 }
+
+// Function to profile the selected file
+void profileFile(const std::string& fileName, double& executionTime, double& cpuUsage) {
+    // Get system times before the function execution
+    FILETIME prevSysKernel, prevSysUser, prevSysIdle;
+    GetSystemTimes(&prevSysIdle, &prevSysKernel, &prevSysUser);
+
+    // Record the start time
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Construct the command to run vcvars64.bat and then compile the file
+    std::string command = "\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat\" && cl /EHsc " + fileName + " /Fe:temp.exe";
+
+    // Run the compilation command using system()
+    system(command.c_str());
+
+    // Record the end time
+    auto end = std::chrono::high_resolution_clock::now();
+    executionTime = std::chrono::duration<double, std::milli>(end - start).count();
+
+    // Get system times after the function execution
+    FILETIME sysKernel, sysUser, sysIdle;
+    GetSystemTimes(&sysIdle, &sysKernel, &sysUser);
+
+    // Calculate CPU usage
+    ULONGLONG sysKernelDiff = (sysKernel.dwLowDateTime - prevSysKernel.dwLowDateTime);
+    ULONGLONG sysUserDiff = (sysUser.dwLowDateTime - prevSysUser.dwLowDateTime);
+    cpuUsage = (sysKernelDiff + sysUserDiff) / double(executionTime);
+}
+
+
+
