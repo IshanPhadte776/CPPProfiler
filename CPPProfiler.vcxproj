@@ -138,8 +138,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CPPProfiler.cpp" />
-    <ClCompile Include="extraFunc.cpp" />
-    <ClCompile Include="NumberProcessor.cpp" />
     <ClCompile Include="vendor\imgui\backends\imgui_impl_dx9.cpp" />
     <ClCompile Include="vendor\imgui\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />

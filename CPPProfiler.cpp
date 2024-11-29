@@ -26,6 +26,8 @@ namespace fs = std::filesystem;
 bool startProfiling = false;
 bool profilingInProgress = false;
 
+
+
 //Time in Seconds
 double executionTime = 0.0;
 // This measures the actual CPU processing time, excluding idle or waiting periods.
@@ -33,6 +35,9 @@ double cpuUsage = 0.0;
 
 double lastExecutionTime = 0.0;
 double lastCpuUsage = 0.0;
+
+std::string lastProfiledFile; // Store the name of the last profiled file
+
 
 // Data
 static LPDIRECT3D9              g_pD3D = nullptr;
@@ -216,9 +221,12 @@ int main(int, char**)
             }
         }
 
+
+
         // Run button logic
         if (!selectedFile.empty()) { // Enable profiling only if a file is selected
             if (ImGui::Button("Profile Selected File")) {
+                lastProfiledFile = selectedFile; // Update the last profiled file
                 std::cout << "Profiling file: " << selectedFile << std::endl;
 
                 // Trigger profiling (you should define profileFunction logic elsewhere)
@@ -228,6 +236,13 @@ int main(int, char**)
                 std::cout << "Execution Time: " << executionTime << " ms" << std::endl;
                 std::cout << "CPU Usage: " << cpuUsage * 100.0 << "%" << std::endl;
             }
+
+            if (!lastProfiledFile.empty() && executionTime > 0) { // Ensure profiling has been run
+                ImGui::Text("Profiling Results for: %s", lastProfiledFile.c_str());
+                ImGui::Text("Execution Time: %.2f ms", executionTime);
+                ImGui::Text("CPU Usage: %.2f%%", cpuUsage * 100.0);
+            }
+
         }
 
         ImGui::End();  // End file selector window
@@ -417,7 +432,7 @@ void profileFunction(double& executionTime, double& cpuUsage) {
 
 
 
-    extraFunction2();
+    //extraFunction2();
 
 
 
@@ -455,6 +470,19 @@ void profileFile(const std::string& fileName, double& executionTime, double& cpu
     ULONGLONG sysKernelDiff = (sysKernel.dwLowDateTime - prevSysKernel.dwLowDateTime);
     ULONGLONG sysUserDiff = (sysUser.dwLowDateTime - prevSysUser.dwLowDateTime);
     cpuUsage = (sysKernelDiff + sysUserDiff) / double(executionTime);
+
+    std::string exeFile = "temp.exe";
+
+    if (std::filesystem::exists(exeFile)) {
+        std::filesystem::remove(exeFile);
+        std::cout << "Deleted temp.exe" << std::endl;
+    }
+
+    std::string objFile = fileName.substr(0, fileName.find_last_of('.')) + ".obj";
+    if (std::filesystem::exists(objFile)) {
+        std::filesystem::remove(objFile);
+        std::cout << "Deleted " << objFile << std::endl;
+    }
 }
 
 
