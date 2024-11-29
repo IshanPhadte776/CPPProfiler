@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <thread> // For sleep functionality
 
 //class NumberProcessor {
 //public:
@@ -102,17 +103,18 @@ int main() {
     NumberProcessor processor; // Create an instance of the NumberProcessor class
 
     // Get file name from the user
-    std::string filename;
-    std::cout << "Enter the name of the file containing the numbers: ";
-    std::cin >> filename;
+    std::string filename = "input.txt";
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
 
     // Read numbers from the file
     processor.readNumbersFromFile(filename);
 
-    // Display the numbers read from the file
+    //// Display the numbers read from the file
     processor.displayNumbers();
 
-    // Compute and display the sum and average
+    //// Compute and display the sum and average
     int sum = processor.computeSum();
     double average = processor.computeAverage();
 

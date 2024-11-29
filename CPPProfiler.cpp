@@ -443,36 +443,78 @@ void profileFunction(double& executionTime, double& cpuUsage) {
     cpuUsage = getCpuUsage(prevSysKernel, prevSysUser, prevSysIdle);
 }
 
+
 // Function to profile the selected file
 void profileFile(const std::string& fileName, double& executionTime, double& cpuUsage) {
-    // Get system times before the function execution
-    FILETIME prevSysKernel, prevSysUser, prevSysIdle;
-    GetSystemTimes(&prevSysIdle, &prevSysKernel, &prevSysUser);
-
-    // Record the start time
+    // Step 1: Record start time
     auto start = std::chrono::high_resolution_clock::now();
 
-    // Construct the command to run vcvars64.bat and then compile the file
+    // Construct the command to compile the file and generate an executable
     std::string command = "\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat\" && cl /EHsc " + fileName + " /Fe:temp.exe";
 
     // Run the compilation command using system()
     system(command.c_str());
 
-    // Record the end time
+    // Step 2: Record end time (execution time)
     auto end = std::chrono::high_resolution_clock::now();
-    executionTime = std::chrono::duration<double, std::milli>(end - start).count();
+    executionTime = std::chrono::duration<double>(end - start).count();  // Execution time in seconds
 
-    // Get system times after the function execution
-    FILETIME sysKernel, sysUser, sysIdle;
-    GetSystemTimes(&sysIdle, &sysKernel, &sysUser);
-
-    // Calculate CPU usage
-    ULONGLONG sysKernelDiff = (sysKernel.dwLowDateTime - prevSysKernel.dwLowDateTime);
-    ULONGLONG sysUserDiff = (sysUser.dwLowDateTime - prevSysUser.dwLowDateTime);
-    cpuUsage = (sysKernelDiff + sysUserDiff) / double(executionTime);
-
+    // Step 3: Run the generated executable and measure its CPU usage
     std::string exeFile = "temp.exe";
 
+    // Convert exeFile to LPCWSTR (wide-character string)
+    std::wstring wideExeFile(exeFile.begin(), exeFile.end());
+    LPCWSTR exeFileW = wideExeFile.c_str();
+
+    // Start the process (we're interested in the PID and CPU usage of temp.exe)
+    STARTUPINFO si = { sizeof(STARTUPINFO) };
+    PROCESS_INFORMATION pi;
+    if (!CreateProcess(exeFileW, NULL, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
+        std::cerr << "Error: Unable to start the process." << std::endl;
+        return;
+    }
+
+    // Wait for the process to finish
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    // Step 4: Get the CPU times for the running process
+    FILETIME creationTime, exitTime, kernelTime, userTime;
+    if (GetProcessTimes(pi.hProcess, &creationTime, &exitTime, &kernelTime, &userTime)) {
+        // Calculate the total CPU time for the process
+        ULARGE_INTEGER kernelTimeU, userTimeU;
+        kernelTimeU.LowPart = kernelTime.dwLowDateTime;
+        kernelTimeU.HighPart = kernelTime.dwHighDateTime;
+        userTimeU.LowPart = userTime.dwLowDateTime;
+        userTimeU.HighPart = userTime.dwHighDateTime;
+
+        // Total CPU time used by the process
+        ULONGLONG totalCpuTime = kernelTimeU.QuadPart + userTimeU.QuadPart;
+
+        // Step 5: Calculate CPU usage (based on the total CPU time used by the process)
+        // Convert execution time to 100-nanosecond intervals for comparison
+        double execTimeIn100ns = executionTime * 10000000;  // 1 second = 10,000,000 100-nanosecond intervals
+
+        // Calculate CPU usage as the percentage of CPU time used by the process
+        cpuUsage = (double)totalCpuTime / execTimeIn100ns * 100.0;
+
+        // Adjust CPU usage based on the number of cores (scale to 100% per core)
+        int numberOfCores = 8;  // Adjust this if you have a different number of cores
+        cpuUsage = (cpuUsage / 100.0) * numberOfCores;  // Scale to 8 cores (or your system's number of cores)
+
+        // Ensure CPU usage doesn't exceed 100% per core
+        if (cpuUsage > 100.0 * numberOfCores) {
+            cpuUsage = 100.0 * numberOfCores;  // Cap it to the maximum usage (100% per core)
+        }
+    }
+    else {
+        std::cerr << "Error: Unable to retrieve CPU times for the process." << std::endl;
+    }
+
+    // Clean up the process
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    // Step 6: Clean up the temporary files (executable and object file)
     if (std::filesystem::exists(exeFile)) {
         std::filesystem::remove(exeFile);
         std::cout << "Deleted temp.exe" << std::endl;
@@ -484,6 +526,3 @@ void profileFile(const std::string& fileName, double& executionTime, double& cpu
         std::cout << "Deleted " << objFile << std::endl;
     }
 }
-
-
-
