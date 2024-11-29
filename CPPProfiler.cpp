@@ -207,7 +207,7 @@ int main(int, char**)
         if (!filesListed) {
             fileList.clear(); // Clear the list before populating
             for (const auto& entry : fs::directory_iterator(".")) { // Iterate in the current directory
-                if (entry.is_regular_file()) {
+                if (entry.is_regular_file() && entry.path().extension() == ".cpp") {
                     fileList.push_back(entry.path().filename().string());
                 }
             }
@@ -514,10 +514,13 @@ void profileFile(const std::string& fileName, double& executionTime, double& cpu
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 
+    std::string fileEXEFile = "temp.exe";
+
     // Step 6: Clean up the temporary files (executable and object file)
-    if (std::filesystem::exists(exeFile)) {
-        std::filesystem::remove(exeFile);
-        std::cout << "Deleted temp.exe" << std::endl;
+    if (std::filesystem::exists(fileEXEFile)) {
+        std::filesystem::remove(fileEXEFile);
+        std::cout << "Deleted " << fileEXEFile << std::endl;
+
     }
 
     std::string objFile = fileName.substr(0, fileName.find_last_of('.')) + ".obj";
