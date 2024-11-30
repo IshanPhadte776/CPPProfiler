@@ -203,11 +203,13 @@ int main(int, char**)
 
         ImGui::Text("Select a file to profile:");
 
+        std::string currentFile = fs::path(__FILE__).filename().string();
+
         // If the file list is not yet loaded, populate it
         if (!filesListed) {
             fileList.clear(); // Clear the list before populating
             for (const auto& entry : fs::directory_iterator(".")) { // Iterate in the current directory
-                if (entry.is_regular_file() && entry.path().extension() == ".cpp") {
+                if (entry.is_regular_file() && entry.path().extension() == ".cpp" && entry.path().filename() != currentFile) {
                     fileList.push_back(entry.path().filename().string());
                 }
             }
