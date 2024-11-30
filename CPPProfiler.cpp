@@ -457,9 +457,7 @@ void profileFile(const std::string& fileName, double& executionTime, double& cpu
     // Run the compilation command using system()
     system(command.c_str());
 
-    // Step 2: Record end time (execution time)
-    auto end = std::chrono::high_resolution_clock::now();
-    executionTime = std::chrono::duration<double>(end - start).count();  // Execution time in seconds
+    
 
     // Step 3: Run the generated executable and measure its CPU usage
     std::string exeFile = "temp.exe";
@@ -515,6 +513,10 @@ void profileFile(const std::string& fileName, double& executionTime, double& cpu
     // Clean up the process
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+
+    // Step 2: Record end time (execution time)
+    auto end = std::chrono::high_resolution_clock::now();
+    executionTime = std::chrono::duration<double>(end - start).count();  // Execution time in seconds
 
     std::string fileEXEFile = "temp.exe";
 
